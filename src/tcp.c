@@ -28,7 +28,7 @@ int initialize_server(char *address, int port)
     TRACE("Binding to port=%d addr=%s...\n", port, address);
     if ((bind(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr))) != 0)
     {
-        ERR("Bind failed.\n");
+        ERR("Bind failed. Ensure you have proper permissions to run on port %d.\n", port);
         return 0;
     }
     TRACE("Bind suceeded.\n");
@@ -41,7 +41,7 @@ int server_listen(int server_sockfd, int max_queued_req, void *(*func)(void*), v
     struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
 
-    TRACE("Serevr ready to listen...\n");
+    TRACE("Server ready to listen...\n");
     if ((listen(server_sockfd, max_queued_req)) != 0)
     {
         ERR("Server failed to listen.\n");
