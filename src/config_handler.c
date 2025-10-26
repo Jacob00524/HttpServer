@@ -85,3 +85,12 @@ int create_config(char *config_path, Server_Settings *settings)
 
     return 1;
 }
+
+void config_free(Server_Settings *settings)
+{
+    free(settings->content_folder);
+    free(settings->error_folder);
+    free(settings->index_name);
+    free(settings->address);
+    memset(settings, 0, sizeof(*settings));
+}
