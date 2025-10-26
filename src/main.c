@@ -252,6 +252,9 @@ int main()
 
     TRACE("Starting server at %s", time_str);
     server_fd = initialize_server(settings.address, settings.port);
+    if (server_fd == -1)
+        return 1;
+
     extra_args.client_handler = handle_http_client;
     server_listen(server_fd, settings.max_queue, http_routine, &extra_args);
 

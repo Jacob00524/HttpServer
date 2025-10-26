@@ -14,7 +14,7 @@ int initialize_server(char *address, int port)
     if (sockfd == -1)
     {
         ERR("Could not create socket.\n");
-        return 0;
+        return -1;
     }
     TRACE("socket established FD=%d.\n", sockfd);
 
@@ -29,7 +29,7 @@ int initialize_server(char *address, int port)
     if ((bind(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr))) != 0)
     {
         ERR("Bind failed. Ensure you have proper permissions to run on port %d.\n", port);
-        return 0;
+        return -1;
     }
     TRACE("Bind suceeded.\n");
 
