@@ -39,13 +39,14 @@ static int parse_headers(char* header_data, HttpRequest *req)
     return 1;
 }
 
-static ssize_t read_http(int sock, char *buffer, size_t buf_size, char** end_of_header)
+static ssize_t read_http_header(int sock, char *buffer, size_t buf_size, char** end_of_header)
 {
     size_t total = 0;
     ssize_t n;
 
-    while (total < buf_size - 1) {
-        n = recv(sock, buffer + total, buf_size - 1 - total, 0);
+    while (total < buf_size)
+    {
+        n = recv(sock, buffer + total, buf_size - total, 0);
         if (n <= 0)
             return -1;
 
@@ -61,6 +62,27 @@ static ssize_t read_http(int sock, char *buffer, size_t buf_size, char** end_of_
 
     /* headers too large */
     return -2;
+}
+
+static ssize_t read_http_content(int sock, char *buffer, size_t buf_size, size_t content_size)
+{
+    size_t total = 0;
+    ssize_t n;
+
+    if (content_size > (buf_size - 1))
+        return -2;
+
+    while (total < content_size)
+    {
+        n = recv(sock, buffer + total, content_size - total, 0);
+        if (n <= 0)
+            return -1;
+
+        total += n;
+        buffer[total] = '\0';
+    }
+
+    return total;
 }
 
 int craft_basic_headers(HttpResponse response, char *buffer, int max_size)
@@ -89,14 +111,14 @@ void *http_routine(void *thr_arg)
 
     free(thr_arg);
 
-    client_req = malloc(MAX_HEADER_SIZE + 1);
+    client_req = malloc(MAX_REQUEST_SIZE + 1);
     if (!client_req)
     {
         WARN("Could not malloc space for client http req. client_fd=%d\n", args.client_fd);
         goto client_cleanup;
     }
 
-    total_header_bytes = read_http(args.client_fd, client_req, MAX_HEADER_SIZE + 1, &header_end);
+    total_header_bytes = read_http_header(args.client_fd, client_req, MAX_HEADER_SIZE, &header_end);
     if (total_header_bytes <= 0)
     {
         WARN("Could not read header data. read_http_headers error %d, client_fd=%d\n", total_header_bytes, args.client_fd);
@@ -112,7 +134,8 @@ void *http_routine(void *thr_arg)
         request.content = calloc(request.content_length, 1);
         if (*header_end)
             strcpy(request.content, header_end);
-        read_http(args.client_fd, request.content + strlen(request.content), MAX_REQUEST_SIZE - strlen(request.content) + 1, &header_end);
+        s = strlen(request.content);
+        read_http_content(args.client_fd, request.content + s, MAX_REQUEST_SIZE - MAX_HEADER_SIZE - s, request.content_length - s);
     }
 
     TRACE("\n\
