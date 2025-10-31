@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/stat.h>
 #include <string.h>
 #include <pthread.h>
 #include <time.h>
@@ -30,28 +29,6 @@ void set_server_settings(Server_Settings settings_in)
     pthread_mutex_lock(&server_settings_mutex);
     memcpy(&g_settings, &settings_in, sizeof(Server_Settings));
     pthread_mutex_unlock(&server_settings_mutex);
-}
-
-int create_folder(char *name)
-{
-    if (mkdir(name, 0755) == 0)
-    {
-        TRACE("Created folder (%s).\n", name);
-        return 1;
-    } else
-    {
-        if (errno == EEXIST)
-        {
-            TRACE("Found folder (%s).\n", name);
-            return 1;
-        }
-        else
-        {
-            ERR("Could not create folder (%s): errno=%d\n", name, errno);
-            return 0;
-        }
-        return 1;
-    }
 }
 
 int create_file(char *text, char *folder, char *name)

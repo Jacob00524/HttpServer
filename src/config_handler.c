@@ -1,9 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include "config_handler.h"
 #include "cJSON.h"
+#include "server_err.h"
 
 int read_config(char *path, Server_Settings *settings)
 {
@@ -93,4 +95,26 @@ void config_free(Server_Settings *settings)
     free(settings->index_name);
     free(settings->address);
     memset(settings, 0, sizeof(*settings));
+}
+
+int create_folder(char *name)
+{
+    if (mkdir(name, 0755) == 0)
+    {
+        TRACE("Created folder (%s).\n", name);
+        return 1;
+    } else
+    {
+        if (errno == EEXIST)
+        {
+            TRACE("Found folder (%s).\n", name);
+            return 1;
+        }
+        else
+        {
+            ERR("Could not create folder (%s): errno=%d\n", name, errno);
+            return 0;
+        }
+        return 1;
+    }
 }
