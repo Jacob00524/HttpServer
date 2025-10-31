@@ -97,6 +97,25 @@ static ssize_t read_http_content(int sock, char *buffer, size_t buf_size, size_t
     return total;
 }
 
+int ensure_html_extension(const char *path, char *output, size_t out_size)
+{
+    strncpy(output, path, out_size - 1);
+    output[out_size - 1] = '\0';
+
+    const char *last_slash = strrchr(path, '/');
+    const char *last_part = last_slash ? last_slash + 1 : path;
+
+    if (!strchr(last_part, '.'))
+    {
+        if (strlen(output) + 5 < out_size)
+        {
+            strcat(output, ".html");
+            return 0;
+        }
+    }
+    return 1;
+}
+
 int craft_basic_headers(HttpResponse response, char *buffer, int max_size)
 {
     int parsed;

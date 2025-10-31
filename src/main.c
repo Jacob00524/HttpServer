@@ -163,7 +163,10 @@ HttpResponse handle_http_client(HttpRequest *request)
         if(!strcmp(request->path, "/"))
             sprintf(path, "%s/%s", settings.content_folder, settings.index_name);
         else
+        {
             sprintf(path, "%s%s", settings.content_folder, request->path);
+            ensure_html_extension(path, path, sizeof(path)); /* if there is no extension add .html */
+        }
         requested_file = fopen(path, "r");
         if (!requested_file)
         {

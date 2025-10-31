@@ -32,3 +32,4 @@ void *http_routine(void *thr_arg);
 int craft_basic_headers(HttpResponse response, char *buffer, int max_size);
 
 char *get_content_type(char *path);
+int ensure_html_extension(const char *path, char *output, size_t out_size);
