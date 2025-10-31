@@ -2,6 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 #include "server_err.h"
 #include "http.h"
 #include "tcp.h"
@@ -9,6 +10,25 @@
 #define MAX_HEADER_SIZE 8192      /* 8 KB */ 
 #define MAX_REQUEST_SIZE (10*1024*1024) /* 10 MB max total */
 #define is_space(x) (x == ' ' ? 1 : 0)
+
+static Server_Settings g_settings;
+static pthread_mutex_t server_settings_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+Server_Settings get_server_settings(void)
+{
+    Server_Settings copy;
+    pthread_mutex_lock(&server_settings_mutex);
+    copy = g_settings;
+    pthread_mutex_unlock(&server_settings_mutex);
+    return copy;
+}
+
+void set_server_settings(Server_Settings settings_in)
+{
+    pthread_mutex_lock(&server_settings_mutex);
+    memcpy(&g_settings, &settings_in, sizeof(Server_Settings));
+    pthread_mutex_unlock(&server_settings_mutex);
+}
 
 static int parse_headers(char* header_data, HttpRequest *req)
 {

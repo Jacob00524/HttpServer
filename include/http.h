@@ -1,3 +1,4 @@
+#pragma once
 #include "tcp.h"
 
 typedef struct HttpResponse
@@ -21,6 +22,17 @@ typedef struct HttpRequest
     char *cookie;
 }HttpRequest;
 
+typedef struct Server_Settings
+{
+    char *content_folder;
+    char *error_folder;
+    char *index_name;
+
+    int port;
+    char *address;
+    int max_queue;
+}Server_Settings;
+
 typedef struct HttpExtraArgs
 {
     HttpResponse (*client_handler)(HttpRequest* req);
@@ -33,3 +45,6 @@ int craft_basic_headers(HttpResponse response, char *buffer, int max_size);
 
 char *get_content_type(char *path);
 int ensure_html_extension(const char *path, char *output, size_t out_size);
+
+Server_Settings get_server_settings(void);
+void set_server_settings(Server_Settings settings_in);

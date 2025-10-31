@@ -10,51 +10,7 @@
 #include "tcp.h"
 #include "http.h"
 
-Server_Settings g_settings;
-pthread_mutex_t server_settings_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 char *server_settings_path = "server_settings.json";
-
-Server_Settings get_server_settings(void)
-{
-    Server_Settings copy;
-    pthread_mutex_lock(&server_settings_mutex);
-    copy = g_settings;
-    pthread_mutex_unlock(&server_settings_mutex);
-    return copy;
-}
-
-void set_server_settings(Server_Settings settings_in)
-{
-    pthread_mutex_lock(&server_settings_mutex);
-    memcpy(&g_settings, &settings_in, sizeof(Server_Settings));
-    pthread_mutex_unlock(&server_settings_mutex);
-}
-
-int create_file(char *text, char *folder, char *name)
-{
-    FILE *file;
-    char path[strlen(folder) + strlen(name) + 2];
-    sprintf(path, "%s/%s", folder, name);
-
-    file = fopen(path, "r");
-    if (!file)
-    {
-        file = fopen(path, "w");
-        if (!file)
-        {
-            WARN("Error creating file (%s).\n", name);
-            return 0;
-        }
-        else
-        {
-            fwrite(text, sizeof(char), strlen(text), file);
-            fclose(file);
-        }
-    }else
-        fclose(file);
-    return 1;
-}
 
 int server_setup(Server_Settings settings)
 {

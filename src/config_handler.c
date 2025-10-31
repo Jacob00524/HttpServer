@@ -118,3 +118,28 @@ int create_folder(char *name)
         return 1;
     }
 }
+
+int create_file(char *text, char *folder, char *name)
+{
+    FILE *file;
+    char path[strlen(folder) + strlen(name) + 2];
+    sprintf(path, "%s/%s", folder, name);
+
+    file = fopen(path, "r");
+    if (!file)
+    {
+        file = fopen(path, "w");
+        if (!file)
+        {
+            WARN("Error creating file (%s).\n", name);
+            return 0;
+        }
+        else
+        {
+            fwrite(text, sizeof(char), strlen(text), file);
+            fclose(file);
+        }
+    }else
+        fclose(file);
+    return 1;
+}
