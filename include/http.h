@@ -18,6 +18,7 @@ typedef struct HttpRequest
     long content_length;
     int keep_alive;
     char *content;
+    char *cookie;
 }HttpRequest;
 
 typedef struct HttpExtraArgs

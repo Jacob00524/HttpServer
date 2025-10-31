@@ -34,7 +34,19 @@ static int parse_headers(char* header_data, HttpRequest *req)
         } else if (strncasecmp(line, "Content-Length:", 15) == 0)
             req->content_length = strtol(line + 15, NULL, 10);
         else if (strncasecmp(line, "Connection:", 11) == 0)
-            if (strstr(line + 11, "keep-alive")) req->keep_alive = 1;
+        {
+            if (strstr(line + 11, "keep-alive"))
+                req->keep_alive = 1;
+        }
+        else if (strncasecmp(line, "Cookie:", 7) == 0)
+        {
+            p = line + 7;
+            while (is_space((unsigned char)*p)) p++;
+
+            req->cookie = malloc(strlen(p) + 1);
+            if (!req->cookie) return -1;
+            strcpy(req->cookie, p);
+        }
     }
     return 1;
 }
