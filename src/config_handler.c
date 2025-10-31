@@ -90,11 +90,14 @@ int create_config(char *config_path, Server_Settings *settings)
 
 void config_free(Server_Settings *settings)
 {
-    free(settings->content_folder);
-    free(settings->error_folder);
-    free(settings->index_name);
-    free(settings->address);
-    memset(settings, 0, sizeof(*settings));
+    if (settings->content_folder)
+        free(settings->content_folder);
+    if (settings->error_folder)
+        free(settings->error_folder);
+    if (settings->index_name)
+        free(settings->index_name);
+    if (settings->address)
+        free(settings->address);
 }
 
 int create_folder(char *name)
