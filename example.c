@@ -1,14 +1,5 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <pthread.h>
 #include <time.h>
-#include <arpa/inet.h>
-#include <errno.h>
-#include "config_handler.h"
 #include "server_err.h"
-#include "tcp.h"
-#include "http.h"
 #include "server_helpers.h"
 
 char *server_settings_path = "server_settings.json";
