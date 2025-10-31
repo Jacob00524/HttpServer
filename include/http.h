@@ -33,10 +33,12 @@ typedef struct Server_Settings
     int max_queue;
 }Server_Settings;
 
-typedef struct HttpExtraArgs
+typedef struct HttpExtraArgs HttpExtraArgs;
+struct HttpExtraArgs
 {
-    HttpResponse (*client_handler)(HttpRequest* req);
-}HttpExtraArgs;
+    HttpResponse (*client_handler)(HttpRequest *req, HttpExtraArgs *extra_args);
+    HttpResponse (*GET_handler)(HttpRequest *req);
+};
 
 void *http_routine(void *thr_arg);
 

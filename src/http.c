@@ -198,7 +198,7 @@ Keep-Alive: %d\n\
 Content: (%p)\n", request.method, request.path, request.host, request.content_length, request.keep_alive, request.content);
 
     extra_args = *(HttpExtraArgs*)args.global_args;
-    extra_args.client_handler(&request);
+    extra_args.client_handler(&request, (HttpExtraArgs*)args.global_args);
 
 client_cleanup:
     if (client_req)

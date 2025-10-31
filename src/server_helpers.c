@@ -7,7 +7,7 @@
 #include "http.h"
 #include "server_helpers.h"
 
-static HttpResponse default_client_handler(HttpRequest *request);
+static HttpResponse default_client_handler(HttpRequest *request, HttpExtraArgs *extra_args);
 
 static int create_server_structure(Server_Settings settings)
 {
@@ -205,13 +205,19 @@ static HttpResponse handle_default_HTTP_GET(HttpRequest *request)
     return response;
 }
 
-static HttpResponse default_client_handler(HttpRequest *request)
+static HttpResponse default_client_handler(HttpRequest *request, HttpExtraArgs *extra_args)
 {
+    HttpResponse response;
+
     if (!strcmp(request->method, "GET"))
     {
-        return handle_default_HTTP_GET(request);
+        if (!extra_args->GET_handler)
+            return handle_default_HTTP_GET(request);
+        else
+            return extra_args->GET_handler(request);
     }else
     {
         WARN("Unhandled http method.\n");
     }
+    return response;
 }
