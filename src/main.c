@@ -13,64 +13,6 @@
 
 char *server_settings_path = "server_settings.json";
 
-HttpResponse handle_error_code(HttpRequest request, int code, char *msg, Server_Settings settings)
-{
-    char path[1024], file_data[1024], header_data[1024];
-    size_t file_length;
-    FILE *error_file;
-    HttpResponse response;
-
-    response.return_code = code;
-    strcpy(response.connection, "close");
-    strcpy(response.msg_code, msg);
-    strcpy(response.content_type, "text/html");
-    file_data[0] = 0;
-
-    if (settings.error_folder)
-    {
-        sprintf(path, "%s/%d.html", settings.error_folder, code);
-        error_file = fopen(path, "r");
-        if (error_file)
-        {
-            fseek(error_file, 0, SEEK_END);
-            file_length = ftell(error_file);
-            fseek(error_file, 0, SEEK_SET);
-
-            if (file_length < sizeof(file_data))
-            {
-                fread(file_data, sizeof(char), file_length, error_file);
-                file_data[file_length] = 0;
-            }else
-                WARN("error file length is too large.\n");
-            fclose(error_file);
-        }else
-            WARN("Could not find %s, defaulting to built-in response.\n", path);
-    }
-    if (file_data[0] == 0)
-    {
-        sprintf(file_data, "\
-<html>\n\
-    <header>\n\
-        <title>Error %d</title>\n\
-    </header>\n\
-    <body>\n\
-        <h1>Error %d %s</h1>\n\
-        <p>An error occured. But, please don't panic, this is a generic message and can happen for many reasons.</p>\n\
-    </body>\n\
-</html>", code, code, msg);
-    }
-
-    response.content_length = strlen(file_data);
-
-    if (craft_basic_headers(response, header_data, sizeof(header_data)) == sizeof(header_data)-1)
-        WARN("It is possilbe not all header data was written.\n");
-    
-    send(request.connection_info.client_fd, header_data, strlen(header_data), 0);
-    send(request.connection_info.client_fd, file_data, response.content_length, 0);
-
-    return response;
-}
-
 HttpResponse handle_http_client(HttpRequest *request)
 {
     HttpResponse response = { 0 };
@@ -94,7 +36,7 @@ HttpResponse handle_http_client(HttpRequest *request)
         requested_file = fopen(path, "r");
         if (!requested_file)
         {
-            response = handle_error_code(*request, 404, "Not Found", settings);
+            response = return_http_error_code(*request, 404, "Not Found", settings);
             return response;
         }
         fseek(requested_file, 0, SEEK_END);
