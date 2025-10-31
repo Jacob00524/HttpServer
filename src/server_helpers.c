@@ -205,9 +205,17 @@ static HttpResponse handle_default_HTTP_GET(HttpRequest *request)
     return response;
 }
 
+static HttpResponse handle_default_HTTP_POST(HttpRequest *request, Server_Settings settings)
+{
+    return return_http_error_code(*request, 404, "Not Found", settings);
+}
+
 static HttpResponse default_client_handler(HttpRequest *request, HttpExtraArgs *extra_args)
 {
     HttpResponse response;
+    Server_Settings settings;
+
+    settings = get_server_settings();
 
     if (!strcmp(request->method, "GET"))
     {
@@ -215,7 +223,15 @@ static HttpResponse default_client_handler(HttpRequest *request, HttpExtraArgs *
             return handle_default_HTTP_GET(request);
         else
             return extra_args->GET_handler(request);
-    }else
+    }
+    else if (!strcmp(request->method, "POST"))
+    {
+        if (!extra_args->POST_handler)
+            return handle_default_HTTP_POST(request, settings);
+        else
+            return extra_args->POST_handler(request);
+    }
+    else
     {
         WARN("Unhandled http method.\n");
     }

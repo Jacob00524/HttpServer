@@ -38,6 +38,7 @@ struct HttpExtraArgs
 {
     HttpResponse (*client_handler)(HttpRequest *req, HttpExtraArgs *extra_args);
     HttpResponse (*GET_handler)(HttpRequest *req);
+    HttpResponse (*POST_handler)(HttpRequest *req);
 };
 
 void *http_routine(void *thr_arg);
