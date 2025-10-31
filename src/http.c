@@ -182,7 +182,7 @@ void *http_routine(void *thr_arg)
 
     if (request.content_length > 0)
     {
-        request.content = calloc(request.content_length, 1);
+        request.content = calloc(request.content_length + 1, 1);
         if (*header_end)
             strcpy(request.content, header_end);
         s = strlen(request.content);
