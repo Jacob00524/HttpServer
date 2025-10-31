@@ -9,41 +9,9 @@
 #include "server_err.h"
 #include "tcp.h"
 #include "http.h"
+#include "server_helpers.h"
 
 char *server_settings_path = "server_settings.json";
-
-int server_setup(Server_Settings settings)
-{
-    FILE *index_f;
-    char index_path[strlen(settings.content_folder) + strlen(settings.index_name) + 2];
-    char sample_index[] = {"\
-<html>\n\
-    <header>\n\
-        <title>Index</title>\n\
-    </header>\n\
-    <body>\n\
-        <h1>Hello World!</h1>\n\
-        <p>This is a sample index page.</p>\n\
-    </body>\n\
-</html>"};
-    char sample_error[] = {"\
-<html>\n\
-    <header>\n\
-        <title>Error 404</title>\n\
-    </header>\n\
-    <body>\n\
-        <h1>Error 404 Not Found</h1>\n\
-        <p>An error occured. But, please don't panic, this is a generic message and can happen for many reasons.</p>\n\
-    </body>\n\
-</html>"};
-    
-    create_folder(settings.content_folder);
-    create_folder(settings.error_folder);
-    create_file(sample_index, settings.content_folder, settings.index_name);
-    create_file(sample_error, settings.error_folder, "404.html");
-
-    return 1;
-}
 
 HttpResponse handle_error_code(HttpRequest request, int code, char *msg, Server_Settings settings)
 {
@@ -159,47 +127,22 @@ HttpResponse handle_http_client(HttpRequest *request)
 int main()
 {
     int server_fd;
-    int result;
     time_t now;
     char time_str[26];
     HttpExtraArgs extra_args;
-    Server_Settings settings;
-
-    if ((result = read_config(server_settings_path, &settings)) == 0)
-    {
-        if (!create_config(server_settings_path, &settings))
-        {
-            ERR("Could not create server settings config file.\n");
-            return 1;
-        }
-    }else if (result == -1)
-    {
-        ERR("Could not read config file.\n");
-        return 1;
-    }
-
-    if (!server_setup(settings))
-        return 1;
-
-    set_server_settings(settings);
 
     now = time(NULL);
     ctime_r(&now, time_str);
 
     TRACE("Starting server at %s", time_str);
-    server_fd = initialize_server(settings.address, settings.port);
-    if (server_fd == -1)
-    {
-        config_free(&settings);
-        return 1;
-    }
+    server_fd = init_http_server(server_settings_path);
 
     extra_args.client_handler = handle_http_client;
-    server_listen(server_fd, settings.max_queue, http_routine, &extra_args);
+    start_http_server_listen(server_fd, &extra_args);
 
     now = time(NULL);
     ctime_r(&now, time_str);
 
     TRACE("Stopping server at %s", time_str);
-    config_free(&settings);
+    free_http_server();
 }
