@@ -73,10 +73,7 @@ int init_http_server(char *settings_json_path)
 
     server_fd = initialize_server(settings.address, settings.port);
     if (server_fd == -1)
-    {
-        config_free(&settings);
         return -1;
-    }
 
     return server_fd;
 }
