@@ -7,3 +7,6 @@ void free_http_server();
 int start_http_server_listen(int server_fd, HttpExtraArgs *extra_arguments);
 
 HttpResponse return_http_error_code(HttpRequest request, int code, char *msg, Server_Settings settings);
+
+HttpResponse handle_default_HTTP_GET(HttpRequest *request);
+HttpResponse handle_default_HTTP_POST(HttpRequest *request, Server_Settings settings);

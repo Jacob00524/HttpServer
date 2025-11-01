@@ -162,7 +162,7 @@ HttpResponse return_http_error_code(HttpRequest request, int code, char *msg, Se
     return response;
 }
 
-static HttpResponse handle_default_HTTP_GET(HttpRequest *request)
+HttpResponse handle_default_HTTP_GET(HttpRequest *request)
 {
     HttpResponse response = { 0 };
     Server_Settings settings = get_server_settings();
@@ -205,7 +205,7 @@ static HttpResponse handle_default_HTTP_GET(HttpRequest *request)
     return response;
 }
 
-static HttpResponse handle_default_HTTP_POST(HttpRequest *request, Server_Settings settings)
+HttpResponse handle_default_HTTP_POST(HttpRequest *request, Server_Settings settings)
 {
     return return_http_error_code(*request, 404, "Not Found", settings);
 }
