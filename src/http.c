@@ -148,7 +148,24 @@ int craft_basic_headers(HttpResponse response, char *buffer, int max_size)
 
 char *get_content_type(char *path)
 {
-    return "text/html";
+    char *format;
+
+    format = strstr(path, ".");
+    if (!format)
+        return "text/html";
+    format += 1;
+
+    if (!strcmp(format, "html")) return "text/html";
+    if (!strcmp(format, "htm")) return "text/html";
+    if (!strcmp(format, "css")) return "text/css";
+    if (!strcmp(format, "js")) return "application/javascript";
+    if (!strcmp(format, "json")) return "application/json";
+    if (!strcmp(format, "png")) return "image/png";
+    if (!strcmp(format, "jpg")) return "image/jpeg";
+    if (!strcmp(format, "jpeg")) return "image/jpeg";
+    if (!strcmp(format, "gif")) return "image/gif";
+
+    return "text/html"; /* unkown */
 }
 
 void *http_routine(void *thr_arg)
