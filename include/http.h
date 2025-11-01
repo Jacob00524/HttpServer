@@ -24,12 +24,12 @@ typedef struct HttpRequest
 
 typedef struct Server_Settings
 {
-    char *content_folder;
-    char *error_folder;
-    char *index_name;
+    char content_folder[256];
+    char error_folder[256];
+    char index_name[256];
 
     int port;
-    char *address;
+    char address[256];
     int max_queue;
 }Server_Settings;
 

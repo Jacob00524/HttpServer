@@ -32,19 +32,55 @@ int read_config(char *path, Server_Settings *settings)
         return -1;
 
     json_obj = cJSON_GetObjectItem(json_root, "content_folder");
-    settings->content_folder = cJSON_GetStringValue(json_obj);
-    
+    json_string = cJSON_GetStringValue(json_obj);
+    if (strlen(json_string) > (sizeof(settings->content_folder) - 1))
+    {
+        ERR("Error reading config file, buffer is not big enough.\n");
+        free(json_string);
+        cJSON_free(json_root);
+        return -1;
+    }
+    strcpy(settings->content_folder, json_string);
+    free(json_string);
+
     json_obj = cJSON_GetObjectItem(json_root, "error_folder");
-    settings->error_folder = cJSON_GetStringValue(json_obj);
+    json_string = cJSON_GetStringValue(json_obj);
+    if (strlen(json_string) > (sizeof(settings->error_folder) - 1))
+    {
+        ERR("Error reading config file, buffer is not big enough.\n");
+        free(json_string);
+        cJSON_free(json_root);
+        return -1;
+    }
+    strcpy(settings->error_folder, json_string);
+    free(json_string);
 
     json_obj = cJSON_GetObjectItem(json_root, "index_name");
-    settings->index_name = cJSON_GetStringValue(json_obj);
+    json_string = cJSON_GetStringValue(json_obj);
+    if (strlen(json_string) > (sizeof(settings->index_name) - 1))
+    {
+        ERR("Error reading config file, buffer is not big enough.\n");
+        free(json_string);
+        cJSON_free(json_root);
+        return -1;
+    }
+    strcpy(settings->index_name, json_string);
+    free(json_string);
 
     json_obj = cJSON_GetObjectItem(json_root, "port");
     settings->port = cJSON_GetNumberValue(json_obj);
 
     json_obj = cJSON_GetObjectItem(json_root, "address");
-    settings->address = cJSON_GetStringValue(json_obj);
+    json_string = cJSON_GetStringValue(json_obj);
+    if (strlen(json_string) > (sizeof(settings->address) - 1))
+    {
+        ERR("Error reading config file, buffer is not big enough.\n");
+        free(json_string);
+        cJSON_free(json_root);
+        return -1;
+    }
+    strcpy(settings->address, json_string);
+    free(json_string);
 
     json_obj = cJSON_GetObjectItem(json_root, "max_queue");
     settings->max_queue = cJSON_GetNumberValue(json_obj);
@@ -61,11 +97,12 @@ int create_config(char *config_path, Server_Settings *settings)
     cJSON *json_root = cJSON_CreateObject();
     char *cjson_string;
 
-    settings->content_folder = "content";
-    settings->error_folder = "error_content";
-    settings->index_name = "index.html";
+    strncpy(settings->content_folder, "content", sizeof(settings->content_folder));
+    strncpy(settings->error_folder, "error_content", sizeof(settings->error_folder));
+    strncpy(settings->index_name, "index.html", sizeof(settings->index_name));
     settings->port = 80;
-    settings->address = "127.0.0.1";
+    strncpy(settings->address, "127.0.0.1", sizeof(settings->address));
+    strncpy(settings->content_folder, "content", sizeof(settings->content_folder));
     settings->max_queue = 5;
 
     cJSON_AddStringToObject(json_root, "content_folder", settings->content_folder);
@@ -86,18 +123,6 @@ int create_config(char *config_path, Server_Settings *settings)
     cJSON_free(json_root);
 
     return 1;
-}
-
-void config_free(Server_Settings *settings)
-{
-    if (settings->content_folder)
-        free(settings->content_folder);
-    if (settings->error_folder)
-        free(settings->error_folder);
-    if (settings->index_name)
-        free(settings->index_name);
-    if (settings->address)
-        free(settings->address);
 }
 
 int create_folder(char *name)
