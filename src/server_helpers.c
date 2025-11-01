@@ -237,3 +237,54 @@ static HttpResponse default_client_handler(HttpRequest *request, HttpExtraArgs *
     }
     return response;
 }
+
+int add_header(char *header_buffer, size_t max_size, char *new_headers)
+{
+    char *end_last_header;
+
+    if (!header_buffer || !new_headers || max_size <= (strlen(header_buffer) + strlen(new_headers)))
+        return 0;
+
+    end_last_header = strstr(header_buffer, "\r\n\r\n");
+    if (!end_last_header)
+        return 0;
+    end_last_header += 2;
+
+    strcpy(end_last_header, new_headers);
+    end_last_header = strstr(header_buffer, "\r\n\r\n");
+    if (end_last_header)
+        return 1;
+
+    if (header_buffer[strlen(header_buffer) - 1] == '\n')
+    {
+        strcat(header_buffer, "\r\n");
+        return 1;
+    }
+
+    if (max_size <= (strlen(header_buffer) + strlen(new_headers) + 2))
+        return 0;
+    strcat(header_buffer, "\r\n\r\n");
+    return 1;
+}
+
+HttpResponse send_http_redirect(HttpRequest* request, char *location, char *addition_headers, Server_Settings settings)
+{
+    char header_data[1024];
+    char new_loc_header[256];
+    HttpResponse response = { 0 };
+
+    strcpy(response.connection, "close");
+    strcpy(response.msg_code, "See Other");
+    response.return_code = 303;
+
+    if (craft_basic_headers(response, header_data, sizeof(header_data)) == sizeof(header_data)-1)
+        WARN("It is possilbe not all header data was written.\n");
+    sprintf(new_loc_header, "Location: %s\r\n", location);
+    if (!add_header(header_data, sizeof(header_data), new_loc_header))
+        return return_http_error_code(*request, 400, "Bad Request", settings);
+    if (!add_header(header_data, sizeof(header_data), addition_headers))
+        return return_http_error_code(*request, 400, "Bad Request", settings);
+
+    send(request->connection_info.client_fd, header_data, strlen(header_data), 0);
+    return response;
+}

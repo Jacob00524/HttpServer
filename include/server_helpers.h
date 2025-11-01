@@ -10,3 +10,5 @@ HttpResponse return_http_error_code(HttpRequest request, int code, char *msg, Se
 
 HttpResponse handle_default_HTTP_GET(HttpRequest *request);
 HttpResponse handle_default_HTTP_POST(HttpRequest *request, Server_Settings settings);
+int add_header(char *header_buffer, size_t max_size, char *new_headers);
+HttpResponse send_http_redirect(HttpRequest* request, char *location, char *addition_headers, Server_Settings settings);
