@@ -36,36 +36,30 @@ int read_config(char *path, Server_Settings *settings)
     if (strlen(json_string) > (sizeof(settings->content_folder) - 1))
     {
         ERR("Error reading config file, buffer is not big enough.\n");
-        free(json_string);
-        cJSON_free(json_root);
+        cJSON_Delete(json_root);
         return -1;
     }
     strcpy(settings->content_folder, json_string);
-    free(json_string);
 
     json_obj = cJSON_GetObjectItem(json_root, "error_folder");
     json_string = cJSON_GetStringValue(json_obj);
     if (strlen(json_string) > (sizeof(settings->error_folder) - 1))
     {
         ERR("Error reading config file, buffer is not big enough.\n");
-        free(json_string);
-        cJSON_free(json_root);
+        cJSON_Delete(json_root);
         return -1;
     }
     strcpy(settings->error_folder, json_string);
-    free(json_string);
 
     json_obj = cJSON_GetObjectItem(json_root, "index_name");
     json_string = cJSON_GetStringValue(json_obj);
     if (strlen(json_string) > (sizeof(settings->index_name) - 1))
     {
         ERR("Error reading config file, buffer is not big enough.\n");
-        free(json_string);
-        cJSON_free(json_root);
+        cJSON_Delete(json_root);
         return -1;
     }
     strcpy(settings->index_name, json_string);
-    free(json_string);
 
     json_obj = cJSON_GetObjectItem(json_root, "port");
     settings->port = cJSON_GetNumberValue(json_obj);
@@ -75,19 +69,15 @@ int read_config(char *path, Server_Settings *settings)
     if (strlen(json_string) > (sizeof(settings->address) - 1))
     {
         ERR("Error reading config file, buffer is not big enough.\n");
-        free(json_string);
-        cJSON_free(json_root);
+        cJSON_Delete(json_root);
         return -1;
     }
     strcpy(settings->address, json_string);
-    free(json_string);
 
     json_obj = cJSON_GetObjectItem(json_root, "max_queue");
     settings->max_queue = cJSON_GetNumberValue(json_obj);
 
-    cJSON_free(json_obj);
-    cJSON_free(json_root);
-
+    cJSON_Delete(json_root);
     return 1;
 }
 
