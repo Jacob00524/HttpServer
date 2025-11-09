@@ -86,14 +86,19 @@ void free_http_server()
     /* does nothing right now. */
 }
 
-int start_http_server_listen(int server_fd, HttpExtraArgs *extra_arguments)
+int start_http_server_listen(int server_fd, HttpExtraArgs *extra_arguments, int secure)
 {
     Server_Settings settings;
+    int result;
 
     settings = get_server_settings();
     if (extra_arguments->client_handler == NULL)
         extra_arguments->client_handler = default_client_handler;
-    if (!server_listen(server_fd, settings.max_queue, http_routine, (void*)extra_arguments))
+    if (secure)
+        result = server_listen_secure(server_fd, settings.max_queue, http_routine, (void*)extra_arguments);
+    else
+        result = server_listen(server_fd, settings.max_queue, http_routine, (void*)extra_arguments);
+    if (!result)
     {
         ERR("An error occurred during http server operation.\n");
         return 0;
@@ -153,8 +158,15 @@ HttpResponse return_http_error_code(HttpRequest request, int code, char *msg, Se
     if (craft_basic_headers(response, header_data, sizeof(header_data)) == sizeof(header_data)-1)
         WARN("It is possilbe not all header data was written.\n");
     
-    send(request.connection_info.client_fd, header_data, strlen(header_data), 0);
-    send(request.connection_info.client_fd, file_data, response.content_length, 0);
+    if (request.connection_info.ssl)
+    {
+        secure_send(request.connection_info.ssl, header_data, strlen(header_data));
+        secure_send(request.connection_info.ssl, file_data, response.content_length);
+    }else
+    {
+        send(request.connection_info.client_fd, header_data, strlen(header_data), 0);
+        send(request.connection_info.client_fd, file_data, response.content_length, 0);
+    }
 
     return response;
 }
@@ -197,8 +209,15 @@ HttpResponse handle_default_HTTP_GET(HttpRequest *request)
     if (craft_basic_headers(response, header_data, sizeof(header_data)) == sizeof(header_data)-1)
         WARN("It is possilbe not all header data was written.\n");
 
-    send(request->connection_info.client_fd, header_data, strlen(header_data), 0);
-    send(request->connection_info.client_fd, file_data, response.content_length, 0);
+    if (request->connection_info.ssl)
+    {
+        secure_send(request->connection_info.ssl, header_data, strlen(header_data));
+        secure_send(request->connection_info.ssl, file_data, response.content_length);
+    }else
+    {
+        send(request->connection_info.client_fd, header_data, strlen(header_data), 0);
+        send(request->connection_info.client_fd, file_data, response.content_length, 0);
+    }
     return response;
 }
 
@@ -282,6 +301,9 @@ HttpResponse send_http_redirect(HttpRequest* request, char *location, char *addi
     if (!add_header(header_data, sizeof(header_data), addition_headers))
         return return_http_error_code(*request, 400, "Bad Request", settings);
 
-    send(request->connection_info.client_fd, header_data, strlen(header_data), 0);
+    if (request->connection_info.ssl)
+        secure_send(request->connection_info.ssl, header_data, strlen(header_data));
+    else
+        send(request->connection_info.client_fd, header_data, strlen(header_data), 0);
     return response;
 }

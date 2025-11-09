@@ -71,14 +71,17 @@ static int parse_headers(char* header_data, HttpRequest *req)
     return 1;
 }
 
-static ssize_t read_http_header(int sock, char *buffer, size_t buf_size, char** end_of_header)
+static ssize_t read_http_header(tcp_args args, char *buffer, size_t buf_size, char** end_of_header)
 {
     size_t total = 0;
     ssize_t n;
 
     while (total < buf_size)
     {
-        n = recv(sock, buffer + total, buf_size - total, 0);
+        if (args.ssl)
+            n = secure_recv(args.ssl, buffer + total, buf_size - total);
+        else
+            n = recv(args.client_fd, buffer + total, buf_size - total, 0);
         if (n <= 0)
             return -1;
 
@@ -96,7 +99,7 @@ static ssize_t read_http_header(int sock, char *buffer, size_t buf_size, char** 
     return -2;
 }
 
-static ssize_t read_http_content(int sock, char *buffer, size_t buf_size, size_t content_size)
+static ssize_t read_http_content(tcp_args args, char *buffer, size_t buf_size, size_t content_size)
 {
     size_t total = 0;
     ssize_t n;
@@ -106,7 +109,10 @@ static ssize_t read_http_content(int sock, char *buffer, size_t buf_size, size_t
 
     while (total < content_size)
     {
-        n = recv(sock, buffer + total, content_size - total, 0);
+        if (args.ssl)
+            n = secure_recv(args.ssl, buffer + total, content_size - total);
+        else
+            n = recv(args.client_fd, buffer + total, content_size - total, 0);
         if (n <= 0)
             return -1;
 
@@ -172,7 +178,7 @@ void *http_routine(void *thr_arg)
 {
     tcp_args args = *((tcp_args*)thr_arg);
     HttpRequest request = { 0 };
-    HttpExtraArgs extra_args;
+    HttpExtraArgs *extra_args;
     char *client_req = NULL, *header_end;
     int total_header_bytes; /* could include some body */
     ssize_t s;
@@ -186,7 +192,7 @@ void *http_routine(void *thr_arg)
         goto client_cleanup;
     }
 
-    total_header_bytes = read_http_header(args.client_fd, client_req, MAX_HEADER_SIZE, &header_end);
+    total_header_bytes = read_http_header(args, client_req, MAX_HEADER_SIZE, &header_end);
     if (total_header_bytes <= 0)
     {
         WARN("Could not read header data. read_http_headers error %d, client_fd=%d\n", total_header_bytes, args.client_fd);
@@ -203,7 +209,7 @@ void *http_routine(void *thr_arg)
         if (*header_end)
             strcpy(request.content, header_end);
         s = strlen(request.content);
-        read_http_content(args.client_fd, request.content + s, MAX_REQUEST_SIZE - MAX_HEADER_SIZE - s, request.content_length - s);
+        read_http_content(args, request.content + s, MAX_REQUEST_SIZE - MAX_HEADER_SIZE - s, request.content_length - s);
     }
 
     TRACE("\n\
@@ -214,12 +220,14 @@ Content-Length: %ld\n\
 Keep-Alive: %d\n\
 Content: (%p)\n", request.method, request.path, request.host, request.content_length, request.keep_alive, request.content);
 
-    extra_args = *(HttpExtraArgs*)args.global_args;
-    extra_args.client_handler(&request, (HttpExtraArgs*)args.global_args);
+    extra_args = (HttpExtraArgs*)args.global_args;
+    extra_args->client_handler(&request, (HttpExtraArgs*)args.global_args);
 
 client_cleanup:
     if (client_req)
         free(client_req);
+    SSL_shutdown(args.ssl);
+    SSL_free(args.ssl);
     close(args.client_fd);
     return NULL;
 }

@@ -17,7 +17,7 @@ int main()
     TRACE("Starting server at %s", time_str);
     server_fd = init_http_server(server_settings_path);
 
-    start_http_server_listen(server_fd, &extra_args);
+    start_http_server_listen(server_fd, &extra_args, 1); /* set secure to 1 for https and 0 for http */
 
     now = time(NULL);
     ctime_r(&now, time_str);
