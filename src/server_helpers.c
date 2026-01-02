@@ -298,8 +298,11 @@ HttpResponse send_http_redirect(HttpRequest* request, char *location, char *addi
     sprintf(new_loc_header, "Location: %s\r\n", location);
     if (!add_header(header_data, sizeof(header_data), new_loc_header))
         return return_http_error_code(*request, 400, "Bad Request", settings);
-    if (!add_header(header_data, sizeof(header_data), addition_headers))
-        return return_http_error_code(*request, 400, "Bad Request", settings);
+    if (addition_headers)
+    {
+        if (!add_header(header_data, sizeof(header_data), addition_headers))
+            return return_http_error_code(*request, 400, "Bad Request", settings);
+    }
 
     if (request->connection_info.ssl)
         secure_send(request->connection_info.ssl, header_data, strlen(header_data));
