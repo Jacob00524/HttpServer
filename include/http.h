@@ -19,6 +19,7 @@ typedef struct HttpRequest
     long content_length;
     int keep_alive;
     char *content;
+    char *query;
     char *cookie;
 }HttpRequest;
 

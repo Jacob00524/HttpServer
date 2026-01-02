@@ -32,7 +32,7 @@ void set_server_settings(Server_Settings settings_in)
 
 static int parse_headers(char* header_data, HttpRequest *req)
 {
-    char *p, *line;
+    char *p, *line, *query;
 
     req->content_length = -1;
 
@@ -40,6 +40,14 @@ static int parse_headers(char* header_data, HttpRequest *req)
     line = strtok(header_data, "\r\n");
     if (!line) return -1;
     sscanf(line, "%7s %255s", req->method, req->path);
+    query = strstr(req->path, "?");
+    if (query)
+    {
+        *query = 0;
+        query += 1;
+        req->query = malloc(strlen(query) + 1);
+        strcpy(req->query, query);
+    }
 
     /* parse other headers */
     while ((line = strtok(NULL, "\r\n")) != NULL && *line != '\0')
