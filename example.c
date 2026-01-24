@@ -1,8 +1,27 @@
+#include <signal.h>
 #include <time.h>
+
 #include "server_err.h"
 #include "server_helpers.h"
 
 char *server_settings_path = "server_settings.json";
+
+static void on_sigint(int sig)
+{
+    (void)sig;
+    stop_server();
+}
+
+void setup_signal_handlers()
+{
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = on_sigint;
+
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+    sigaction(SIGQUIT, &sa, NULL);
+}
 
 int main()
 {
@@ -10,6 +29,8 @@ int main()
     time_t now;
     char time_str[26];
     HttpExtraArgs extra_args = { 0 };
+
+    setup_signal_handlers();
 
     now = time(NULL);
     ctime_r(&now, time_str);

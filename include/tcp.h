@@ -10,6 +10,7 @@ typedef struct tcp_args
 
 /* returns fd for server */
 int initialize_server(char *address, int port);
+void stop_server();
 
 /* 
     listens for incomming connections and spawns a new thread which runs func

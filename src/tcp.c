@@ -1,9 +1,25 @@
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 #include <arpa/inet.h>
 #include <pthread.h>
 #include "server_err.h"
 #include "tcp.h"
+
+static volatile sig_atomic_t server_running = 1;
+static int g_listen_fd = -1;
+
+void stop_server()
+{
+    server_running = 0;
+    
+    if (g_listen_fd != -1)
+    {
+        shutdown(g_listen_fd, SHUT_RDWR);
+        close(g_listen_fd);
+        g_listen_fd = -1;
+    }
+}
 
 int initialize_server(char *address, int port)
 {
@@ -48,8 +64,9 @@ int server_listen(int server_sockfd, int max_queued_req, void *(*func)(void*), v
         return 0;
     }
     TRACE("Server waiting for connections...\n");
+    g_listen_fd = server_sockfd;
 
-    while (1)
+    while (server_running)
     {
         tcp_args *args = calloc(1, sizeof(tcp_args));
         pthread_t thread;
@@ -99,7 +116,7 @@ int server_listen_secure(int server_sockfd, int max_queued_req, void *(*func)(vo
     }
     TRACE("Server waiting for connections...\n");
 
-    while (1)
+    while (server_running)
     {
         tcp_args *args = calloc(1, sizeof(tcp_args));
         pthread_t thread;
