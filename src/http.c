@@ -3,9 +3,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <pthread.h>
-#include "server_err.h"
 #include "http.h"
-#include "tcp.h"
 
 #define MAX_HEADER_SIZE 8192      /* 8 KB */ 
 #define MAX_REQUEST_SIZE (10*1024*1024) /* 10 MB max total */
@@ -14,7 +12,7 @@
 static Server_Settings g_settings;
 static pthread_mutex_t server_settings_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-Server_Settings get_server_settings(void)
+Server_Settings http_get_server_settings(void)
 {
     Server_Settings copy;
     pthread_mutex_lock(&server_settings_mutex);
@@ -23,7 +21,7 @@ Server_Settings get_server_settings(void)
     return copy;
 }
 
-void set_server_settings(Server_Settings settings_in)
+void http_set_server_settings(Server_Settings settings_in)
 {
     pthread_mutex_lock(&server_settings_mutex);
     memcpy(&g_settings, &settings_in, sizeof(Server_Settings));
@@ -46,7 +44,7 @@ static int parse_headers(char* header_data, HttpRequest *req)
         *query = 0;
         query += 1;
         req->query = malloc(strlen(query) + 1);
-        strcpy(req->query, query);
+        snprintf(req->query, strlen(query) + 1, "%s", query);
     }
 
     /* parse other headers */
@@ -54,7 +52,7 @@ static int parse_headers(char* header_data, HttpRequest *req)
     {
         if (strncasecmp(line, "Host:", 5) == 0)
         {
-            strncpy(req->host, line + 5, sizeof(req->host) - 1);
+            snprintf(req->host, sizeof(req->host), "%s", line + 5);
             p = req->host;
             while (is_space((unsigned char)*p)) p++;
             memmove(req->host, p, strlen(p) + 1);
@@ -73,7 +71,7 @@ static int parse_headers(char* header_data, HttpRequest *req)
 
             req->cookie = malloc(strlen(p) + 1);
             if (!req->cookie) return -1;
-            strcpy(req->cookie, p);
+            snprintf(req->cookie, strlen(p) + 1, "%s", p);
         }
     }
     return 1;
@@ -131,26 +129,7 @@ static ssize_t read_http_content(tcp_args args, char *buffer, size_t buf_size, s
     return total;
 }
 
-int ensure_html_extension(const char *path, char *output, size_t out_size)
-{
-    strncpy(output, path, out_size - 1);
-    output[out_size - 1] = '\0';
-
-    const char *last_slash = strrchr(path, '/');
-    const char *last_part = last_slash ? last_slash + 1 : path;
-
-    if (!strchr(last_part, '.'))
-    {
-        if (strlen(output) + 5 < out_size)
-        {
-            strcat(output, ".html");
-            return 0;
-        }
-    }
-    return 1;
-}
-
-int craft_basic_headers(HttpResponse response, char *buffer, int max_size)
+int http_make_basic_headers(HttpResponse response, char *buffer, int max_size)
 {
     int parsed;
     if (response.content_length)
@@ -180,6 +159,17 @@ char *get_content_type(char *path)
     if (!strcmp(format, "gif")) return "image/gif";
 
     return "text/html"; /* unkown */
+}
+
+static void free_request(HttpRequest request)
+{
+    if (request.content)
+        free(request.content);
+    request.content_length = 0;
+    if (request.cookie)
+        free(request.cookie);
+    if (request.query)
+        free(request.query);
 }
 
 void *http_routine(void *thr_arg)
@@ -215,18 +205,18 @@ void *http_routine(void *thr_arg)
     {
         request.content = calloc(request.content_length + 1, 1);
         if (*header_end)
-            strcpy(request.content, header_end);
+            snprintf(request.content, request.content_length + 1, "%s", header_end);
         s = strlen(request.content);
         read_http_content(args, request.content + s, MAX_REQUEST_SIZE - MAX_HEADER_SIZE - s, request.content_length - s);
     }
 
     TRACE("\n\
 Method: %s\n\
-Path: %s\n\
-Host: %s\n\
-Content-Length: %ld\n\
-Keep-Alive: %d\n\
-Content: (%p)\n", request.method, request.path, request.host, request.content_length, request.keep_alive, request.content);
+\tPath: %s\n\
+\tHost: %s\n\
+\tContent-Length: %ld\n\
+\tKeep-Alive: %d\n\
+\tContent: (%p)\n", request.method, request.path, request.host, request.content_length, request.keep_alive, request.content);
 
     extra_args = (HttpExtraArgs*)args.global_args;
     extra_args->client_handler(&request, (HttpExtraArgs*)args.global_args);
@@ -234,8 +224,7 @@ Content: (%p)\n", request.method, request.path, request.host, request.content_le
 client_cleanup:
     if (client_req)
         free(client_req);
-    SSL_shutdown(args.ssl);
-    SSL_free(args.ssl);
-    close(args.client_fd);
+    tcp_args_destroy(&args);
+    free_request(request);
     return NULL;
 }

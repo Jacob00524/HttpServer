@@ -3,18 +3,34 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include "server_err.h"
-#include "config_handler.h"
 #include "http.h"
-#include "server_helpers.h"
 
 static HttpResponse default_client_handler(HttpRequest *request, HttpExtraArgs *extra_args);
 
+static int ensure_html_extension(const char *path, char *output, size_t out_size)
+{
+    if (!path || !output || out_size == 0) return 1;
+
+    if (output != path)
+        snprintf(output, out_size, "%s", path);
+
+    const char *last_slash = strrchr(output, '/');
+    const char *last_part  = last_slash ? last_slash + 1 : output;
+
+    if (!strchr(last_part, '.'))
+    {
+        size_t len = strlen(output);
+        if (len + 5 < out_size)
+        {
+            memcpy(output + len, ".html", 6);
+            return 0;
+        }
+    }
+    return 1;
+}
+
 static int create_server_structure(Server_Settings settings)
 {
-    FILE *index_f;
-    char index_path[strlen(settings.content_folder) + strlen(settings.index_name) + 2];
-    int result;
-
     char sample_index[] = {"\
 <html>\n\
     <header>\n\
@@ -65,7 +81,7 @@ int init_http_server(char *settings_json_path)
         ERR("Could not read config file.\n");
         return -1;
     }
-    set_server_settings(settings);
+    http_set_server_settings(settings);
 
     /* Makes sure server structure is setup, creates it if its not. */
     if (!create_server_structure(settings))
@@ -81,9 +97,14 @@ int init_http_server(char *settings_json_path)
     return server_fd;
 }
 
-void free_http_server()
+void http_stop_server()
 {
-    /* does nothing right now. */
+    stop_tcp_server();
+}
+
+void http_cleanup_server()
+{
+    tcp_server_cleanup();
 }
 
 int start_http_server_listen(int server_fd, HttpExtraArgs *extra_arguments, int secure)
@@ -91,7 +112,7 @@ int start_http_server_listen(int server_fd, HttpExtraArgs *extra_arguments, int 
     Server_Settings settings;
     int result;
 
-    settings = get_server_settings();
+    settings = http_get_server_settings();
     if (extra_arguments->client_handler == NULL)
         extra_arguments->client_handler = default_client_handler;
     if (secure)
@@ -115,13 +136,13 @@ HttpResponse return_http_error_code(HttpRequest request, int code, char *msg, Se
 
     response.return_code = code;
     strcpy(response.connection, "close");
-    strcpy(response.msg_code, msg);
+    snprintf(response.msg_code, sizeof(response.msg_code), "%s", msg);
     strcpy(response.content_type, "text/html");
     file_data[0] = 0;
 
-    if (settings.error_folder)
+    if (settings.error_folder[0])
     {
-        sprintf(path, "%s/%d.html", settings.error_folder, code);
+        snprintf(path, sizeof(path), "%s/%d.html", settings.error_folder, code);
         error_file = fopen(path, "r");
         if (error_file)
         {
@@ -155,7 +176,7 @@ HttpResponse return_http_error_code(HttpRequest request, int code, char *msg, Se
 
     response.content_length = strlen(file_data);
 
-    if (craft_basic_headers(response, header_data, sizeof(header_data)) == sizeof(header_data)-1)
+    if (http_make_basic_headers(response, header_data, sizeof(header_data)) == sizeof(header_data)-1)
         WARN("It is possilbe not all header data was written.\n");
     
     if (request.connection_info.ssl)
@@ -174,18 +195,18 @@ HttpResponse return_http_error_code(HttpRequest request, int code, char *msg, Se
 HttpResponse handle_default_HTTP_GET(HttpRequest *request)
 {
     HttpResponse response = { 0 };
-    Server_Settings settings = get_server_settings();
+    Server_Settings settings = http_get_server_settings();
     FILE *requested_file;
     char *file_data;
     size_t file_length;
     char header_data[1024], path[1024];
 
     if(!strcmp(request->path, "/"))
-        sprintf(path, "%s/%s", settings.content_folder, settings.index_name);
+        snprintf(path, sizeof(path), "%s/%s", settings.content_folder, settings.index_name);
     else
     {
-        sprintf(path, "%s%s", settings.content_folder, request->path);
-        ensure_html_extension(path, path, sizeof(path)); /* if there is no extension add .html */
+        snprintf(path, sizeof(path), "%s%s", settings.content_folder, request->path);
+        ensure_html_extension(path, path, sizeof(path));
     }
     requested_file = fopen(path, "r");
     if (!requested_file)
@@ -203,10 +224,10 @@ HttpResponse handle_default_HTTP_GET(HttpRequest *request)
     response.return_code = 200;
     strcpy(response.connection, "close");
     strcpy(response.msg_code, "OK");
-    strcpy(response.content_type, get_content_type(path));
+    snprintf(response.content_type, sizeof(response.content_type), "%s", get_content_type(path));
     response.content_length = file_length;
 
-    if (craft_basic_headers(response, header_data, sizeof(header_data)) == sizeof(header_data)-1)
+    if (http_make_basic_headers(response, header_data, sizeof(header_data)) == sizeof(header_data)-1)
         WARN("It is possilbe not all header data was written.\n");
 
     if (request->connection_info.ssl)
@@ -218,20 +239,19 @@ HttpResponse handle_default_HTTP_GET(HttpRequest *request)
         send(request->connection_info.client_fd, header_data, strlen(header_data), 0);
         send(request->connection_info.client_fd, file_data, response.content_length, 0);
     }
+    free(file_data);
     return response;
 }
 
-HttpResponse handle_default_HTTP_POST(HttpRequest *request, Server_Settings settings)
+HttpResponse handle_default_HTTP_POST(HttpRequest *request)
 {
+    Server_Settings settings = http_get_server_settings();
     return return_http_error_code(*request, 404, "Not Found", settings);
 }
 
 static HttpResponse default_client_handler(HttpRequest *request, HttpExtraArgs *extra_args)
 {
-    HttpResponse response;
-    Server_Settings settings;
-
-    settings = get_server_settings();
+    HttpResponse response = { 0 };
 
     if (!strcmp(request->method, "GET"))
     {
@@ -243,7 +263,7 @@ static HttpResponse default_client_handler(HttpRequest *request, HttpExtraArgs *
     else if (!strcmp(request->method, "POST"))
     {
         if (!extra_args->POST_handler)
-            return handle_default_HTTP_POST(request, settings);
+            return handle_default_HTTP_POST(request);
         else
             return extra_args->POST_handler(request);
     }
@@ -254,7 +274,7 @@ static HttpResponse default_client_handler(HttpRequest *request, HttpExtraArgs *
     return response;
 }
 
-int add_header(char *header_buffer, size_t max_size, char *new_headers)
+int http_add_header(char *header_buffer, size_t max_size, char *new_headers)
 {
     char *end_last_header;
 
@@ -293,14 +313,14 @@ HttpResponse send_http_redirect(HttpRequest* request, char *location, char *addi
     strcpy(response.msg_code, "See Other");
     response.return_code = 303;
 
-    if (craft_basic_headers(response, header_data, sizeof(header_data)) == sizeof(header_data)-1)
+    if (http_make_basic_headers(response, header_data, sizeof(header_data)) == sizeof(header_data)-1)
         WARN("It is possilbe not all header data was written.\n");
     sprintf(new_loc_header, "Location: %s\r\n", location);
-    if (!add_header(header_data, sizeof(header_data), new_loc_header))
+    if (!http_add_header(header_data, sizeof(header_data), new_loc_header))
         return return_http_error_code(*request, 400, "Bad Request", settings);
     if (addition_headers)
     {
-        if (!add_header(header_data, sizeof(header_data), addition_headers))
+        if (!http_add_header(header_data, sizeof(header_data), addition_headers))
             return return_http_error_code(*request, 400, "Bad Request", settings);
     }
 

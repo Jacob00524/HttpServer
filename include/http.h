@@ -42,13 +42,25 @@ struct HttpExtraArgs
     HttpResponse (*POST_handler)(HttpRequest *req);
 };
 
+#include "server_err.h"
+#include "config_handler.h"
+
 void *http_routine(void *thr_arg);
+Server_Settings http_get_server_settings(void);
+void http_set_server_settings(Server_Settings settings_in);
 
-/* returns amount written to buffer not including null */
-int craft_basic_headers(HttpResponse response, char *buffer, int max_size);
+int init_http_server(char *settings_json_path);
+void http_stop_server();
+void http_cleanup_server();
+int start_http_server_listen(int server_fd, HttpExtraArgs *extra_arguments, int secure);
 
+/*
+    Helpers
+*/
+int http_make_basic_headers(HttpResponse response, char *buffer, int max_size);
+int http_add_header(char *header_buffer, size_t max_size, char *new_headers);
 char *get_content_type(char *path);
-int ensure_html_extension(const char *path, char *output, size_t out_size);
-
-Server_Settings get_server_settings(void);
-void set_server_settings(Server_Settings settings_in);
+HttpResponse return_http_error_code(HttpRequest request, int code, char *msg, Server_Settings settings);
+HttpResponse handle_default_HTTP_GET(HttpRequest *request);
+HttpResponse handle_default_HTTP_POST(HttpRequest *request);
+HttpResponse send_http_redirect(HttpRequest* request, char *location, char *addition_headers, Server_Settings settings);
