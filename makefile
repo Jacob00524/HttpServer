@@ -23,7 +23,7 @@ OBJ := $(patsubst src/%.c, $(BUILD_FOLDER)/%.o, $(SRC))
 
 default: $(CJSON_SO) $(TARGET) $(EXAMPLE_TARGET)
 
-$(TARGET): $(OBJ) $(OBJ_ALGO)
+$(TARGET): $(OBJ)
 	$(CC) $(OBJ) -o $(BUILD_FOLDER)/$@ $(LDFLAGS) \
 	-L. -lcjson -lssl -lcrypto \
 	-Wl,-rpath,'$$ORIGIN'
