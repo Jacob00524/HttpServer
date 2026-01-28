@@ -60,4 +60,5 @@ clean:
 	$(MAKE) -C external/cJSON clean
 	rm -rf $(BUILD_FOLDER)
 	rm -f libcjson.so
+	rm -f libhttp.so
 	rm -f $(EXAMPLE_TARGET)
