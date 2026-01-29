@@ -36,7 +36,10 @@ void stop_tcp_server()
     if (g_shutdown_efd != -1)
     {
         uint64_t one = 1;
-        (void)write(g_shutdown_efd, &one, sizeof(one));
+        ssize_t write_size;
+        write_size = write(g_shutdown_efd, &one, sizeof(one));
+        if (write_size != sizeof(one))
+            WARN("Unexpected error occured.\n");
     }
 }
 
@@ -183,7 +186,10 @@ int server_listen(int server_sockfd, int max_queued_req, void *(*func)(void*), v
         if (fds[1].revents & POLLIN)
         {
             uint64_t tmp;
-            (void)read(g_shutdown_efd, &tmp, sizeof(tmp));
+            size_t read_length;
+            read_length = read(g_shutdown_efd, &tmp, sizeof(tmp));
+            if (read_length != sizeof(tmp))
+                WARN("Unexpected Error Occured.\n");
             break;
         }
 
@@ -287,7 +293,10 @@ int server_listen_secure(int server_sockfd, int max_queued_req, void *(*func)(vo
         if (fds[1].revents & POLLIN)
         {
             uint64_t tmp;
-            (void)read(g_shutdown_efd, &tmp, sizeof(tmp));
+            size_t read_length;
+            read_length = read(g_shutdown_efd, &tmp, sizeof(tmp));
+            if (read_length != sizeof(tmp))
+                WARN("Unexpected Error Occurred.\n");
             break;
         }
 

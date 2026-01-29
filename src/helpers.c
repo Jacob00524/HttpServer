@@ -130,7 +130,7 @@ int start_http_server_listen(int server_fd, HttpExtraArgs *extra_arguments, int 
 HttpResponse return_http_error_code(HttpRequest request, int code, char *msg, Server_Settings settings)
 {
     char path[1024], file_data[1024], header_data[1024];
-    size_t file_length;
+    size_t file_length, read_length;
     FILE *error_file;
     HttpResponse response;
 
@@ -152,8 +152,11 @@ HttpResponse return_http_error_code(HttpRequest request, int code, char *msg, Se
 
             if (file_length < sizeof(file_data))
             {
-                fread(file_data, sizeof(char), file_length, error_file);
-                file_data[file_length] = 0;
+                read_length = fread(file_data, sizeof(char), file_length, error_file);
+                if (read_length != file_length)
+                    file_data[0] = 0;
+                else
+                    file_data[file_length] = 0;
             }else
                 WARN("error file length is too large.\n");
             fclose(error_file);
@@ -198,7 +201,7 @@ HttpResponse handle_default_HTTP_GET(HttpRequest *request)
     Server_Settings settings = http_get_server_settings();
     FILE *requested_file;
     char *file_data;
-    size_t file_length;
+    size_t file_length, read_length;
     char header_data[1024], path[1024];
 
     if(!strcmp(request->path, "/"))
@@ -218,8 +221,13 @@ HttpResponse handle_default_HTTP_GET(HttpRequest *request)
     file_length = ftell(requested_file);
     fseek(requested_file, 0, SEEK_SET);
     file_data = malloc(sizeof(char) * file_length);
-    fread(file_data, sizeof(char), file_length, requested_file);
+    read_length = fread(file_data, sizeof(char), file_length, requested_file);
     fclose(requested_file);
+    if (read_length != file_length)
+    {
+        free(file_data);
+        return return_http_error_code(*request, 404, "Not Found", settings);
+    }
 
     response.return_code = 200;
     strcpy(response.connection, "close");

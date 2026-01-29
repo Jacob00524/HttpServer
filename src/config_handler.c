@@ -12,7 +12,7 @@ int read_config(char *path, Server_Settings *settings)
     FILE *json_file;
     cJSON *json_root, *json_obj;
     char *json_string;
-    size_t json_length;
+    size_t json_length, read_length;
     
     json_file = fopen(path, "r");
     if (!json_file)
@@ -22,8 +22,13 @@ int read_config(char *path, Server_Settings *settings)
     json_length = ftell(json_file);
     fseek(json_file, 0, SEEK_SET);
     json_string = malloc((json_length * sizeof(char)) + 1);
-    (void)fread(json_string, sizeof(char), json_length, json_file);
+    read_length = fread(json_string, sizeof(char), json_length, json_file);
     fclose(json_file);
+    if (read_length != json_length)
+    {
+        free(json_string);
+        return 0;
+    }
     json_string[json_length] = 0;
 
     json_root = cJSON_Parse(json_string);
