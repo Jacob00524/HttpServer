@@ -43,7 +43,7 @@ $(BUILD_FOLDER):
 $(EXAMPLE_TARGET): example.c $(TARGET)
 	$(CC) -g3 -O0 -Wall -Wextra -fsanitize=address,undefined \
 	-Iinclude $< -o $@ \
-	-L. -lhttp \
+	-L. -lhttp -lcjson \
 	-Wl,-rpath,\$$ORIGIN
 
 cert:
