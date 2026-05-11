@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -18,3 +21,7 @@ int server_listen(int server_sockfd, int max_queued_req, void *(*func)(void*), v
 int server_listen_secure(int server_sockfd, int max_queued_req, void *(*func)(void*), void *global_args);
 int secure_recv(SSL *ssl, char *buffer, size_t buffer_length);
 int secure_send(SSL *ssl, char *response, size_t count);
+
+#ifdef __cplusplus
+}
+#endif

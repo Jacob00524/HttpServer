@@ -1,4 +1,9 @@
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "tcp.h"
 
 typedef struct HttpResponse
@@ -64,3 +69,7 @@ HttpResponse return_http_error_code(HttpRequest request, int code, char *msg, Se
 HttpResponse handle_default_HTTP_GET(HttpRequest *request);
 HttpResponse handle_default_HTTP_POST(HttpRequest *request);
 HttpResponse send_http_redirect(HttpRequest* request, char *location, char *addition_headers, Server_Settings settings);
+
+#ifdef __cplusplus
+}
+#endif
