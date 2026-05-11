@@ -2,6 +2,7 @@
 build/
 *.o
 *.so
+*.a
 example.out
 server_settings.json
 *.pem

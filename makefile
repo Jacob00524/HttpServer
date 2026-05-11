@@ -10,7 +10,7 @@ LDFLAGS = -shared -Wl,-soname,$(TARGET)
 DEBUG_CFLAGS   = -g3 -O0 -Wall -Wextra -fPIC -fsanitize=address,undefined
 RELEASE_CFLAGS = -O4 -Wall -Wextra -fPIC
 
-CJSON_SO = external/cJSON/libcjson.so
+CJSON_SO = external/cJSON/libcjson.a
 
 ifeq ($(MODE),debug)
   CFLAGS = $(DEBUG_CFLAGS)
@@ -43,7 +43,7 @@ $(BUILD_FOLDER):
 $(EXAMPLE_TARGET): example.c $(TARGET)
 	$(CC) -g3 -O0 -Wall -Wextra -fsanitize=address,undefined \
 	-Iinclude $< -o $@ \
-	-L. -lhttp -lcjson \
+	-L. -lhttp \
 	-Wl,-rpath,\$$ORIGIN
 
 cert:
