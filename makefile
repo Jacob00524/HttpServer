@@ -1,64 +1,81 @@
 CC = gcc
+AR = ar
+
 MODE ?= release
 
-TARGET = libhttp.so
+TARGET = libhttp.a
 EXAMPLE_TARGET = example.out
 BUILD_FOLDER = build
 
-CPPFLAGS = -Iexternal/cJSON
-LDFLAGS = -shared -Wl,-soname,$(TARGET)
-DEBUG_CFLAGS   = -g3 -O0 -Wall -Wextra -fPIC -fsanitize=address,undefined
-RELEASE_CFLAGS = -O4 -Wall -Wextra -fPIC
+CPPFLAGS = -Iinclude -Iexternal/cJSON
 
-CJSON_SO = external/cJSON/libcjson.a
+DEBUG_CFLAGS   = -g3 -O0 -Wall -Wextra -fsanitize=address,undefined
+RELEASE_CFLAGS = -O3 -Wall -Wextra
+
+CJSON_LIB = external/cJSON/libcjson.a
+
+LDLIBS = $(CJSON_LIB) -lssl -lcrypto
 
 ifeq ($(MODE),debug)
-  CFLAGS = $(DEBUG_CFLAGS)
+	CFLAGS = $(DEBUG_CFLAGS)
 else
-  CFLAGS = $(RELEASE_CFLAGS)
+	CFLAGS = $(RELEASE_CFLAGS)
 endif
 
 SRC := $(wildcard src/*.c)
-OBJ := $(patsubst src/%.c, $(BUILD_FOLDER)/%.o, $(SRC))
+OBJ := $(patsubst src/%.c,$(BUILD_FOLDER)/%.o,$(SRC))
 
-default: $(CJSON_SO) $(TARGET) $(EXAMPLE_TARGET)
+
+.PHONY: default clean cert san_cert
+
+default: $(TARGET) $(EXAMPLE_TARGET)
+
 
 $(TARGET): $(OBJ)
-	$(CC) $(OBJ) -o $(BUILD_FOLDER)/$@ $(LDFLAGS) \
-	-L. -lcjson -lssl -lcrypto \
-	-Wl,-rpath,'$$ORIGIN'
-	cp $(BUILD_FOLDER)/$(TARGET) .
+	$(AR) rcs $(BUILD_FOLDER)/$@ $(OBJ)
+	cp $(BUILD_FOLDER)/$@ $@
 
-$(CJSON_SO):
+
+$(CJSON_LIB):
 	git submodule update --init --recursive
 	$(MAKE) -C external/cJSON
-	cp -L $(CJSON_SO) .
+
 
 $(BUILD_FOLDER)/%.o: src/%.c | $(BUILD_FOLDER)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -Iinclude -c $< -o $@
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+
 
 $(BUILD_FOLDER):
 	mkdir -p $@
 
-$(EXAMPLE_TARGET): example.c $(TARGET)
-	$(CC) -g3 -O0 -Wall -Wextra -fsanitize=address,undefined \
-	-Iinclude $< -o $@ \
-	-L. -lhttp \
-	-Wl,-rpath,\$$ORIGIN
+
+$(EXAMPLE_TARGET): example.c $(TARGET) $(CJSON_LIB)
+	$(CC) $(DEBUG_CFLAGS) $(CPPFLAGS) \
+		example.c \
+		$(TARGET) \
+		$(LDLIBS) \
+		-o $@
+
 
 cert:
-	openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes
+	openssl req -x509 -newkey rsa:2048 \
+		-keyout key.pem \
+		-out cert.pem \
+		-days 365 \
+		-nodes
+
 
 san_cert:
 	openssl req -x509 -nodes -newkey rsa:2048 \
-	-keyout key.pem -out cert.pem \
-	-days 365 \
-	-subj "/CN=localhost" \
-	-addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+		-keyout key.pem \
+		-out cert.pem \
+		-days 365 \
+		-subj "/CN=localhost" \
+		-addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+
 
 clean:
 	$(MAKE) -C external/cJSON clean
 	rm -rf $(BUILD_FOLDER)
-	rm -f libcjson.so
-	rm -f libhttp.so
+	rm -f $(TARGET)
 	rm -f $(EXAMPLE_TARGET)
