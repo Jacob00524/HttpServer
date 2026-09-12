@@ -66,6 +66,7 @@ int http_make_basic_headers(HttpResponse response, char *buffer, int max_size);
 int http_add_header(char *header_buffer, size_t max_size, char *new_headers);
 char *get_content_type(char *path);
 HttpResponse return_http_error_code(HttpRequest request, int code, char *msg, Server_Settings settings);
+HttpResponse return_http_error_code_EX(HttpRequest request, int code, char *msg, Server_Settings settings, char *headers);
 HttpResponse handle_default_HTTP_GET(HttpRequest *request);
 HttpResponse handle_default_HTTP_POST(HttpRequest *request);
 HttpResponse send_http_redirect(HttpRequest* request, char *location, char *addition_headers, Server_Settings settings);

@@ -195,6 +195,77 @@ HttpResponse return_http_error_code(HttpRequest request, int code, char *msg, Se
     return response;
 }
 
+HttpResponse return_http_error_code_EX(HttpRequest request, int code, char *msg, Server_Settings settings, char *headers)
+{
+    char path[1024], file_data[1024], header_data[1024];
+    size_t file_length, read_length;
+    FILE *error_file;
+    HttpResponse response;
+
+    response.return_code = code;
+    strcpy(response.connection, "close");
+    snprintf(response.msg_code, sizeof(response.msg_code), "%s", msg);
+    strcpy(response.content_type, "text/html");
+    file_data[0] = 0;
+
+    if (settings.error_folder[0])
+    {
+        snprintf(path, sizeof(path), "%s/%d.html", settings.error_folder, code);
+        error_file = fopen(path, "r");
+        if (error_file)
+        {
+            fseek(error_file, 0, SEEK_END);
+            file_length = ftell(error_file);
+            fseek(error_file, 0, SEEK_SET);
+
+            if (file_length < sizeof(file_data))
+            {
+                read_length = fread(file_data, sizeof(char), file_length, error_file);
+                if (read_length != file_length)
+                    file_data[0] = 0;
+                else
+                    file_data[file_length] = 0;
+            }else
+                WARN("error file length is too large.\n");
+            fclose(error_file);
+        }else
+            WARN("Could not find %s, defaulting to built-in response.\n", path);
+    }
+    if (file_data[0] == 0)
+    {
+        sprintf(file_data, "\
+<html>\n\
+    <header>\n\
+        <title>Error %d</title>\n\
+    </header>\n\
+    <body>\n\
+        <h1>Error %d %s</h1>\n\
+        <p>An error occured. But, please don't panic, this is a generic message and can happen for many reasons.</p>\n\
+    </body>\n\
+</html>", code, code, msg);
+    }
+
+    response.content_length = strlen(file_data);
+
+    if (http_make_basic_headers(response, header_data, sizeof(header_data)) == sizeof(header_data)-1)
+        WARN("It is possilbe not all header data was written.\n");
+
+    if (headers)
+        http_add_header(header_data, sizeof(header_data), headers);
+
+    if (request.connection_info.ssl)
+    {
+        secure_send(request.connection_info.ssl, header_data, strlen(header_data));
+        secure_send(request.connection_info.ssl, file_data, response.content_length);
+    }else
+    {
+        send(request.connection_info.client_fd, header_data, strlen(header_data), 0);
+        send(request.connection_info.client_fd, file_data, response.content_length, 0);
+    }
+
+    return response;
+}
+
 HttpResponse handle_default_HTTP_GET(HttpRequest *request)
 {
     HttpResponse response = { 0 };
